@@ -1,0 +1,16 @@
+{
+  "name": "Piggy Bank",
+  "short_name": "Piggy",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#E1F5FE",
+  "theme_color": "#FF9800",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

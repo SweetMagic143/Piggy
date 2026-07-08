@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#FF9800">
+    <title>Piggy Bank</title>
+
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="apple-touch-icon" href="icon.svg">
+
+    <style>
+        :root {
+            --bg: #E1F5FE; --primary: #FF9800; --secondary: #29B6F6;
+            --good: #43A047; --bad: #E53935; --spend: #8E24AA;    
+            --text: #37474F; --card: #FFFFFF;
+            --font-stack: 'Comic Sans MS', 'Chalkboard SE', 'Fredoka One', 'Varela Round', sans-serif;
+        }
+        * { box-sizing: border-box; font-family: var(--font-stack); user-select: none; }
+        body { margin: 0; padding: 0; background-color: var(--bg); color: var(--text); overflow-x: hidden; }
+        
+        header { background: var(--primary); color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 10; box-shadow: 0 4px 0 #F57C00; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; margin-bottom: 15px;}
+        .btn-icon { background: rgba(0,0,0,0.1); border: 2px solid rgba(255,255,255,0.5); border-radius: 12px; color: white; font-size: 1.1rem; cursor: pointer; padding: 8px 12px; font-weight: bold; display: flex; align-items: center; justify-content: center;}
+        .container { padding: 10px; padding-bottom: 80px; }
+        .view { display: none; animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .view.active { display: block; }
+        
+        h2 { margin-top: 0; color: var(--secondary); font-size: 1.8rem; text-align: center; text-shadow: 1px 1px 0px #fff;}
+        .card { background: var(--card); border-radius: 25px; padding: 20px; margin-bottom: 20px; border: 4px solid #fff; box-shadow: 0 8px 0 rgba(0,0,0,0.06); }
+        .btn { display: block; width: 100%; padding: 16px; border-radius: 20px; border: none; font-size: 1.2rem; font-weight: 900; cursor: pointer; text-align: center; margin-bottom: 12px; color: white; box-shadow: 0 6px 0 rgba(0,0,0,0.2); transition: all 0.1s; text-transform: uppercase; letter-spacing: 1px;}
+        .btn:active { transform: translateY(6px); box-shadow: 0 0 0 transparent; }
+        .btn-good { background: var(--good); box-shadow: 0 6px 0 #2E7D32; }
+        .btn-bad { background: var(--bad); box-shadow: 0 6px 0 #C62828; }
+        .btn-spend { background: var(--spend); box-shadow: 0 6px 0 #6A1B9A; }
+        .btn-primary { background: var(--secondary); box-shadow: 0 6px 0 #0277BD; }
+        .btn-small { padding: 8px 12px; font-size: 0.9rem; border-radius: 10px; margin-bottom: 0; display: inline-block; width: auto;}
+
+        .child-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .child-card { text-align: center; padding: 25px 10px; cursor: pointer; transition: transform 0.2s; }
+        .child-card:active { transform: scale(0.95); }
+        .avatar { font-size: 4rem; display: block; filter: drop-shadow(0 4px 2px rgba(0,0,0,0.1));}
+        
+        .stats-grid { display: grid; grid-template-columns: 1fr; gap: 10px; text-align: center; background: #f0f9ff; border: 3px dashed #B3E5FC;}
+        .balance-huge { font-size: 3.5rem; font-weight: 900; color: var(--primary); margin: 5px 0; text-shadow: 2px 2px 0px #FFE0B2; animation: gentlePulse 2s infinite; }
+        .level-badge { background: #FFD700; color: #d35400; padding: 8px 15px; border-radius: 20px; font-size: 1rem; font-weight: 900; display: inline-block; border: 2px solid #FFF; box-shadow: 0 4px 0 rgba(0,0,0,0.1);}
+        .progress-container { width: 100%; background: #E0E0E0; border-radius: 20px; height: 25px; overflow: hidden; margin-top: 10px; border: 3px solid #fff; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);}
+        .progress-bar { height: 100%; background: linear-gradient(90deg, #8BC34A, #4CAF50); width: 0%; transition: width 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+        .list-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 2px dashed #E0F7FA; background: #fafafa; border-radius: 10px; margin-bottom: 5px;}
+        .amt-good { color: var(--good); font-weight: 900; font-size: 1.1rem; }
+        .amt-bad { color: var(--bad); font-weight: 900; font-size: 1.1rem; }
+        .amt-spend { color: var(--spend); font-weight: 900; font-size: 1.1rem; }
+
+        input[type="text"], input[type="number"], input[type="password"], input[type="date"], select { width: 100%; padding: 15px; margin: 8px 0 15px 0; border: 3px solid #E1F5FE; border-radius: 15px; font-size: 1.1rem; background: #fff; font-weight: bold; color: #333; outline: none; transition: border 0.3s;}
+        input:focus, select:focus { border-color: var(--secondary); }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 100; backdrop-filter: blur(3px);}
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; padding: 25px; border-radius: 30px; width: 90%; max-width: 380px; border: 5px solid var(--secondary); box-shadow: 0 10px 20px rgba(0,0,0,0.2); animation: popIn 0.3s;}
+        
+        #modal-pin .modal-content { border-color: #607D8B; background: #eceff1; text-align: center;}
+        #modal-pin h3 { font-size: 2rem; margin: 0 0 10px 0; color: #455A64; }
+        #inpPin { text-align: center; font-size: 2rem; letter-spacing: 10px; border-color: #90A4AE; }
+
+        #feedback-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 999; display: none; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: white;}
+        #feedback-screen.active { display: flex; }
+        #feedback-emoji { font-size: 8rem; margin-bottom: 20px; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.3));}
+        #feedback-text { font-size: 3rem; font-weight: 900; text-shadow: 2px 4px 0px rgba(0,0,0,0.3); margin:0;}
+
+        @keyframes popIn { 0% { opacity: 0; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1); } }
+        @keyframes bounceZoom { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.3); } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-20px); } 40%, 80% { transform: translateX(20px); } }
+        @keyframes gentlePulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        
+        .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #37474F; color: white; padding: 12px 25px; border-radius: 30px; display: none; z-index: 1000; font-weight: bold; border: 2px solid rgba(255,255,255,0.2); box-shadow: 0 5px 15px rgba(0,0,0,0.2);}
+        
+        .settings-section { border: 3px solid #eee; border-radius: 20px; padding: 15px; margin-bottom: 20px; background: #fafafa;}
+        .history-card { background: #fff; padding: 10px; border-radius: 12px; border: 2px solid #E1F5FE; margin-bottom: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+
+        .spend-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 15px; }
+        .spend-tile { background: #fff; border: 3px solid #E1F5FE; border-radius: 15px; padding: 10px 5px; text-align: center; cursor: pointer; transition: all 0.2s; display:flex; flex-direction:column; align-items:center; justify-content:center;}
+        .spend-tile.active { border-color: var(--spend); background: #F3E5F5; transform: scale(1.05); }
+        .spend-tile-emoji { font-size: 1.8rem; margin-bottom: 5px; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1)); }
+        .spend-tile-name { font-size: 0.75rem; font-weight: bold; color: #555; line-height: 1.1; }
+        
+        .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
+        .num-btn { background: #fff; border: 3px solid #E1F5FE; border-radius: 15px; font-size: 1.5rem; font-weight: 900; color: var(--text); padding: 12px; cursor: pointer; box-shadow: 0 4px 0 #E1F5FE; transition: transform 0.1s; }
+        .num-btn:active { transform: translateY(4px); box-shadow: none; }
+        .num-btn-action { background: #ECEFF1; border-color: #CFD8DC; box-shadow: 0 4px 0 #CFD8DC; color: #455A64; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <button class="btn-icon" id="btnBack" style="visibility: hidden; width:45px;">🔙</button>
+        <div style="text-align:center; flex-grow:1;">
+            <h1 style="margin:0; font-size:1.5rem; letter-spacing:1px; font-weight:900;">🐷 Piggy Bank</h1>
+            <div style="font-size:0.75rem; letter-spacing:1px; text-transform:uppercase; margin-top:2px; font-weight:bold; color:#FFE0B2;">Help and Earn</div>
+        </div>
+        <div style="display:flex; gap:8px;">
+            <button class="btn-icon" id="btnMute" onclick="App.toggleSound()" style="width:45px;">🔊</button>
+            <button class="btn-icon" id="btnSettings" style="width:45px;">🔒</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <div id="view-home" class="view active">
+            <div style="background:var(--card); padding:20px; border-radius:25px; text-align:center; margin-bottom:25px; border:3px dashed var(--primary); box-shadow: 0 4px 0 rgba(0,0,0,0.05);">
+                <h2 style="font-size:1.6rem; margin-bottom:8px; color:var(--primary);">Welcome to Piggy Bank!</h2>
+                <p style="margin:0; font-weight:bold; color:#555; font-size:1.1rem;">Let's help and earn pocket money 💰</p>
+            </div>
+            <h2>Who is playing?</h2>
+            <div class="child-grid" id="childList"></div>
+            <div id="noChildrenMsg" style="text-align:center; display:none; margin-top: 20px;">
+                <p style="font-size: 1.2rem; font-weight:bold; color: #888;">No kids added yet.<br>Ask a parent to unlock the vault!</p>
+            </div>
+        </div>
+
+        <div id="view-dashboard" class="view">
+            <div class="card" style="text-align: center;">
+                <span class="avatar" id="dashAvatar"></span>
+                <h2 id="dashName" style="color:var(--text); font-size:2.5rem; margin:10px 0;">Name</h2>
+                <div class="level-badge" id="dashLevel">Beginner</div>
+                <div class="balance-huge">₹<span id="dashBalance">0</span></div>
+                <p style="margin:5px 0 0 0; font-size:1.1rem; color:#666; font-weight:bold;">Goal: <span id="dashGoalText">None</span></p>
+                <div class="progress-container"><div class="progress-bar" id="dashProgress"></div></div>
+            </div>
+
+            <div class="stats-grid card">
+                <div style="border-bottom: 2px dashed #B3E5FC; padding-bottom:10px;"><span style="color:#888; font-weight:bold;">Daily Limit</span><br><b id="dashLimit" style="font-size:1.2rem;">₹0/0</b></div>
+                <div style="display:flex; justify-content:space-around; margin-top:5px;">
+                    <div><span style="color:#888; font-weight:bold; font-size:0.9rem;">Earned</span><br><b style="color:var(--good); font-size:1.1rem;" id="dashEarned">₹0</b></div>
+                    <div><span style="color:#888; font-weight:bold; font-size:0.9rem;">Penalties</span><br><b style="color:var(--bad); font-size:1.1rem;" id="dashLost">₹0</b></div>
+                    <div><span style="color:#888; font-weight:bold; font-size:0.9rem;">Spent</span><br><b style="color:var(--spend); font-size:1.1rem;" id="dashSpent">₹0</b></div>
+                </div>
+            </div>
+
+            <button class="btn btn-good" onclick="App.showActivities('good')">✅ I Did Good Work! (Earn)</button>
+            <button class="btn btn-bad" onclick="App.showActivities('bad')">❌ Uh Oh, Penalty...</button>
+            <button class="btn btn-spend" onclick="App.openSpendModal()">🛍️ Spend Money</button>
+
+            <div class="card" style="margin-top: 20px;">
+                <h3 style="margin-top:0; color:#555;">Recent Activity</h3>
+                <div id="dashHistory"></div>
+            </div>
+        </div>
+
+        <div id="view-activity" class="view">
+            <h2 id="activityTitle">Pick Activity</h2>
+            <div id="activityList"></div>
+        </div>
+
+        <div id="view-settings" class="view">
+            <h2>Parent Control Vault</h2>
+            
+            <div class="settings-section">
+                <h3 style="color:#00796B; margin-top:0;">📊 Activity Tracker</h3>
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <select id="filterChild" onchange="App.filterHistory()" style="margin:0; padding:10px; flex:1;"><option value="all">All Kids</option></select>
+                    <input type="date" id="filterDate" onchange="App.filterHistory()" style="margin:0; padding:10px; flex:1;">
+                </div>
+                <div id="parentHistoryList" style="max-height: 250px; overflow-y: auto; padding: 5px;"></div>
+            </div>
+
+            <div class="settings-section">
+                <h3 style="color:var(--secondary); margin-top:0;">👨‍👩‍👧 Manage Kids</h3>
+                <div id="settingsChildList" style="margin-bottom: 15px;"></div>
+                <button class="btn btn-primary" onclick="App.openEditChildModal(null)">➕ Add New Child</button>
+            </div>
+
+            <div class="settings-section">
+                <h3 style="color:var(--good); margin-top:0;">✅ Manage Good Activities</h3>
+                <div id="settingsGoodActs" style="margin-bottom: 15px;"></div>
+                <button class="btn btn-good" onclick="App.openEditActModal(null, 'good')">➕ Add Good Work</button>
+            </div>
+
+            <div class="settings-section">
+                <h3 style="color:var(--bad); margin-top:0;">❌ Manage Penalties</h3>
+                <div id="settingsBadActs" style="margin-bottom: 15px;"></div>
+                <button class="btn btn-bad" onclick="App.openEditActModal(null, 'bad')">➕ Add Penalty</button>
+            </div>
+            
+            <button class="btn btn-bad" onclick="if(confirm('Erase EVERYTHING?')) App.resetData()" style="margin-top:30px;">⚠️ Factory Reset</button>
+        </div>
+    </div>
+
+    <div id="feedback-screen">
+        <div id="feedback-emoji">🎉</div>
+        <div id="feedback-text">Awesome!</div>
+    </div>
+
+    <div id="modal-pin" class="modal-overlay">
+        <div class="modal-content">
+            <h3>🔒 Secret Vault</h3>
+            <p style="color:#78909C; font-weight:bold;">Enter Parent PIN</p>
+            <input type="password" id="inpPin" placeholder="****" inputmode="numeric" pattern="[0-9]*">
+            <div style="display:flex; gap:10px; margin-top:15px;">
+                <button class="btn btn-primary" style="flex:1" onclick="App.verifyPin()">Unlock</button>
+                <button class="btn" style="flex:1; background:#90A4AE; box-shadow:0 6px 0 #607D8B;" onclick="App.closeModal('modal-pin')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-spend" class="modal-overlay">
+        <div class="modal-content" style="max-width: 400px; padding: 20px;">
+            <h3 style="color:var(--spend); margin-top:0; text-align:center; font-size:1.8rem;">🛍️ Spend Money</h3>
+            
+            <div style="background:#f5f5f5; border-radius:15px; padding:15px; margin-bottom:15px; text-align:center; border: 3px solid #E1F5FE;">
+                <div id="spendItemDisplay" style="font-weight:bold; font-size:1.2rem; color:#555; min-height:1.5em; text-transform:uppercase;">Select an Item...</div>
+                <div style="font-size:3rem; font-weight:900; color:var(--spend);">₹<span id="spendAmtDisplay">0</span></div>
+            </div>
+
+            <div class="spend-grid" id="spendItemsGrid"></div>
+
+            <div class="numpad" id="spendNumpad">
+                <button class="num-btn" onclick="App.numpadPress('1')">1</button>
+                <button class="num-btn" onclick="App.numpadPress('2')">2</button>
+                <button class="num-btn" onclick="App.numpadPress('3')">3</button>
+                <button class="num-btn" onclick="App.numpadPress('4')">4</button>
+                <button class="num-btn" onclick="App.numpadPress('5')">5</button>
+                <button class="num-btn" onclick="App.numpadPress('6')">6</button>
+                <button class="num-btn" onclick="App.numpadPress('7')">7</button>
+                <button class="num-btn" onclick="App.numpadPress('8')">8</button>
+                <button class="num-btn" onclick="App.numpadPress('9')">9</button>
+                <button class="num-btn num-btn-action" onclick="App.numpadPress('C')">C</button>
+                <button class="num-btn" onclick="App.numpadPress('0')">0</button>
+                <button class="num-btn num-btn-action" onclick="App.numpadPress('B')">⌫</button>
+            </div>
+
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <button class="btn btn-spend" style="flex:1" onclick="App.submitSpend()">Spend It!</button>
+                <button class="btn" style="flex:1; background:#ccc; box-shadow:0 6px 0 #999;" onclick="App.closeModal('modal-spend')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-time" class="modal-overlay">
+        <div class="modal-content">
+            <h3 style="color:var(--bad)">Time Penalty</h3>
+            <p id="timePenaltyDesc" style="font-weight:bold; color:#555;">Enter minutes:</p>
+            <input type="number" id="inpTimeMinutes" placeholder="e.g. 15">
+            <div style="display:flex; gap:10px; margin-top:15px;">
+                <button class="btn btn-bad" style="flex:1" onclick="App.submitTimeActivity()">Apply</button>
+                <button class="btn" style="flex:1; background:#ccc; box-shadow:0 6px 0 #999;" onclick="App.closeModal('modal-time')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-edit-child" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="editChildTitle" style="color:var(--secondary)">Add Child</h3>
+            <label style="font-weight:bold; font-size:0.9rem;">Name:</label>
+            <input type="text" id="inpCName" placeholder="Child's Name">
+            <label style="font-weight:bold; font-size:0.9rem;">Emoji Avatar:</label>
+            <input type="text" id="inpCEmoji" placeholder="e.g. 👦, 👧, 🦁">
+            <label style="font-weight:bold; font-size:0.9rem;">Target Goal (₹):</label>
+            <input type="number" id="inpCGoal" placeholder="e.g. 500">
+            <label style="font-weight:bold; font-size:0.9rem;">Daily Earning Limit (₹):</label>
+            <input type="number" id="inpCLimit" placeholder="e.g. 50">
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <button class="btn btn-primary" style="flex:1" onclick="App.saveChild()">Save</button>
+                <button class="btn" style="flex:1; background:#ccc; box-shadow:0 6px 0 #999;" onclick="App.closeModal('modal-edit-child')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-edit-act" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="editActTitle">Edit Activity</h3>
+            <label style="font-weight:bold; font-size:0.9rem;">Activity Name:</label>
+            <input type="text" id="inpAName" placeholder="e.g. Cleaned Room">
+            <label style="font-weight:bold; font-size:0.9rem;">Amount (₹):</label>
+            <input type="number" id="inpAAmt" placeholder="e.g. 10">
+            
+            <div id="timeBasedToggle" style="display:none; margin: 15px 0; background:#f0f0f0; padding:10px; border-radius:10px;">
+                <label style="font-weight:bold; cursor:pointer;">
+                    <input type="checkbox" id="inpATime" style="width:auto; margin-right:10px; transform:scale(1.5);" onchange="document.getElementById('timeRateSettings').style.display = this.checked ? 'block' : 'none'">
+                    Make this Time-Based
+                </label>
+                
+                <div id="timeRateSettings" style="display:none; margin-top:15px; border-top:1px solid #ccc; padding-top:10px;">
+                    <label style="font-size:0.9rem; font-weight:bold; color:#555;">Deduction Rule:</label>
+                    <div style="display:flex; gap:5px; align-items:center; margin-top:5px;">
+                        <span>₹</span>
+                        <input type="number" id="inpTRateAmt" style="margin:0; padding:10px;" value="1">
+                        <span> per </span>
+                        <input type="number" id="inpTRateMin" style="margin:0; padding:10px;" value="1">
+                        <span> mins</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display:flex; gap:10px; margin-top:15px;">
+                <button class="btn btn-primary" style="flex:1" id="btnSaveAct" onclick="App.saveActivity()">Save</button>
+                <button class="btn" style="flex:1; background:#ccc; box-shadow:0 6px 0 #999;" onclick="App.closeModal('modal-edit-act')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast">Message</div>
+
+    <script>
+        const spendItemsList = [
+            { id: 'i1', name: 'Toy', emoji: '🧸' },
+            { id: 'i2', name: 'Icecream', emoji: '🍦' },
+            { id: 'i3', name: 'Chocolate', emoji: '🍫' },
+            { id: 'i4', name: 'Books', emoji: '📚' },
+            { id: 'i5', name: 'Pen', emoji: '🖊️' },
+            { id: 'i6', name: 'Color Pencil', emoji: '✏️' },
+            { id: 'i7', name: 'Crayons', emoji: '🖍️' },
+            { id: 'i8', name: 'Paints', emoji: '🎨' }
+        ];
+
+        const Store = {
+            data: {
+                children: [],
+                activities: {
+                    good: [ 
+                        { id: 'g1', name: 'Brushing Teeth', amt: 2 }, 
+                        { id: 'g2', name: 'Taking Bath', amt: 2 }, 
+                        { id: 'g3', name: 'Homework', amt: 10 },
+                        { id: 'g4', name: 'Eating homefood', amt: 5 },
+                        { id: 'g5', name: 'Cleaning room', amt: 5 },
+                        { id: 'g6', name: 'Helping Mom or Dad', amt: 5 },
+                        { id: 'g7', name: 'Playing outside', amt: 10 },
+                        { id: 'g8', name: 'Sleeping Early', amt: 5 },
+                        { id: 'g9', name: 'Waking early', amt: 5 }
+                    ],
+                    bad: [ 
+                        { id: 'b1', name: 'Screentime penalty', timeBased: true, rateAmt: 1, rateMin: 1, amt: 0 }, 
+                        { id: 'b2', name: 'Not listening', amt: 10 }, 
+                        { id: 'b3', name: 'Messy room', amt: 5 },
+                        { id: 'b4', name: 'Food leftover', amt: 5 }
+                    ]
+                },
+                pin: '1234',
+                settings: { soundEnabled: true }
+            },
+            load() { 
+                const saved = localStorage.getItem('piggy_pwa_data_v5'); 
+                if (saved) {
+                    this.data = JSON.parse(saved); 
+                    if(this.data.settings === undefined) this.data.settings = { soundEnabled: true };
+                }
+            },
+            save() { localStorage.setItem('piggy_pwa_data_v5', JSON.stringify(this.data)); }
+        };
+
+        const Sound = {
+            play(type) {
+                if(!Store.data.settings.soundEnabled) return;
+                try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain); gain.connect(ctx.destination);
+                    if (type === 'good') {
+                        osc.type = 'sine'; osc.frequency.setValueAtTime(523.25, ctx.currentTime); osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1); osc.frequency.setValueAtTime(783.99, ctx.currentTime + 0.2);
+                        gain.gain.setValueAtTime(0, ctx.currentTime); gain.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 0.05); gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+                        osc.start(); osc.stop(ctx.currentTime + 0.5);
+                    } else if (type === 'bad') {
+                        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(300, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.4);
+                        gain.gain.setValueAtTime(0.5, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+                        osc.start(); osc.stop(ctx.currentTime + 0.4);
+                    } else if (type === 'spend') {
+                        osc.type = 'triangle'; osc.frequency.setValueAtTime(600, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.3);
+                        gain.gain.setValueAtTime(0.5, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+                        osc.start(); osc.stop(ctx.currentTime + 0.3);
+                    }
+                } catch(e) { console.log('Audio not supported'); }
+            }
+        };
+
+        const App = {
+            activeChildId: null, pendingActivity: null,
+            editingChildId: null, editingActId: null, editingActType: null,
+            spendState: { item: null, amount: '0' },
+            
+            init() { 
+                Store.load(); 
+                this.bindEvents(); 
+                document.getElementById('btnMute').innerText = Store.data.settings.soundEnabled ? '🔊' : '🔇';
+                this.navTo('home'); 
+            },
+            bindEvents() {
+                document.getElementById('btnBack').onclick = () => this.navTo('home');
+                document.getElementById('btnSettings').onclick = () => { document.getElementById('inpPin').value = ''; document.getElementById('modal-pin').classList.add('active'); };
+            },
+            toggleSound() {
+                Store.data.settings.soundEnabled = !Store.data.settings.soundEnabled;
+                Store.save();
+                document.getElementById('btnMute').innerText = Store.data.settings.soundEnabled ? '🔊' : '🔇';
+                this.showToast(Store.data.settings.soundEnabled ? 'Sound On' : 'Sound Muted');
+            },
+            navTo(viewId) {
+                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                document.getElementById(`view-${viewId}`).classList.add('active');
+                document.getElementById('btnBack').style.visibility = viewId === 'home' ? 'hidden' : 'visible';
+                if (viewId === 'home') this.renderHome();
+                if (viewId === 'settings') { this.renderSettings(); this.filterHistory(); }
+            },
+            showToast(msg) { const t = document.getElementById('toast'); t.innerText = msg; t.style.display = 'block'; setTimeout(() => t.style.display = 'none', 3000); },
+            closeModal(id) { document.getElementById(id).classList.remove('active'); },
+            
+            triggerFeedback(type, text) {
+                const screen = document.getElementById('feedback-screen');
+                const emoji = document.getElementById('feedback-emoji');
+                const txt = document.getElementById('feedback-text');
+                screen.classList.add('active'); txt.innerText = text;
+                if(type === 'good') {
+                    screen.style.background = 'rgba(67, 160, 71, 0.95)'; emoji.innerText = '🎉💰🤩'; emoji.style.animation = 'bounceZoom 0.5s ease-in-out infinite'; Sound.play('good');
+                } else if (type === 'spend') {
+                    screen.style.background = 'rgba(142, 36, 170, 0.95)'; emoji.innerText = '🛍️🎁💸'; emoji.style.animation = 'popIn 0.3s ease-in-out'; Sound.play('spend');
+                } else {
+                    screen.style.background = 'rgba(229, 57, 53, 0.95)'; emoji.innerText = '🚫📉⚠️'; emoji.style.animation = 'shake 0.3s ease-in-out infinite'; Sound.play('bad');
+                }
+                setTimeout(() => { screen.classList.remove('active'); emoji.style.animation = 'none'; }, 2000);
+            },
+
+            verifyPin() {
+                const input = document.getElementById('inpPin').value;
+                if (input === Store.data.pin || input === "1234") { 
+                    this.closeModal('modal-pin'); this.navTo('settings'); 
+                } else { this.showToast('Incorrect PIN'); Sound.play('bad'); }
+            },
+
+            renderHome() {
+                const list = document.getElementById('childList'); const msg = document.getElementById('noChildrenMsg'); list.innerHTML = '';
+                if (Store.data.children.length === 0) { msg.style.display = 'block'; } 
+                else {
+                    msg.style.display = 'none';
+                    Store.data.children.forEach(c => { list.innerHTML += `<div class="card child-card" onclick="App.openDashboard('${c.id}')"><span class="avatar">${c.emoji || '👦'}</span><h3 style="margin:5px 0;">${c.name}</h3><div style="color:var(--primary); font-weight:900; font-size:1.3rem;">₹${c.balance}</div></div>`; });
+                }
+            },
+            openDashboard(id) { this.activeChildId = id; this.updateDashboard(); this.navTo('dashboard'); },
+            updateDashboard() {
+                const child = Store.data.children.find(c => c.id === this.activeChildId); if(!child) return;
+                document.getElementById('dashAvatar').innerText = child.emoji; document.getElementById('dashName').innerText = child.name; document.getElementById('dashBalance').innerText = child.balance;
+                
+                let earned = 0, lost = 0, spent = 0, todayEarned = 0; const today = new Date().toDateString();
+                
+                child.history.forEach(h => { 
+                    let t = h.type || (h.amt > 0 ? 'good' : 'bad'); 
+                    if(t === 'good') { earned += h.amt; if(new Date(h.time).toDateString() === today) todayEarned += h.amt; } 
+                    else if (t === 'spend') { spent += Math.abs(h.amt); }
+                    else { lost += Math.abs(h.amt); } 
+                });
+                
+                document.getElementById('dashEarned').innerText = `₹${earned}`; 
+                document.getElementById('dashLost').innerText = `₹${lost}`; 
+                document.getElementById('dashSpent').innerText = `₹${spent}`; 
+                document.getElementById('dashLimit').innerText = `₹${todayEarned} / ₹${child.dailyLimit}`;
+                
+                if(child.goal > 0) { document.getElementById('dashGoalText').innerText = `₹${child.goal}`; const pct = Math.min(100, Math.max(0, (child.balance / child.goal) * 100)); document.getElementById('dashProgress').style.width = `${pct}%`; } 
+                else { document.getElementById('dashGoalText').innerText = 'Not Set'; document.getElementById('dashProgress').style.width = '0%'; }
+                
+                let level = "Beginner 🌱"; if(child.balance >= 150) level = "Champion 🏆"; else if(child.balance >= 50) level = "Star ⭐"; document.getElementById('dashLevel').innerText = level;
+                
+                const histDiv = document.getElementById('dashHistory'); histDiv.innerHTML = ''; const recent = [...child.history].reverse().slice(0, 5);
+                if(recent.length===0) histDiv.innerHTML = '<p style="color:#999; font-weight:bold; text-align:center;">No activity yet.</p>';
+                recent.forEach(h => { 
+                    let t = h.type || (h.amt > 0 ? 'good' : 'bad');
+                    let icon = t === 'spend' ? '🛍️' : (h.amt > 0 ? '✅' : '❌');
+                    let cssClass = t === 'spend' ? 'amt-spend' : (h.amt > 0 ? 'amt-good' : 'amt-bad');
+                    let sign = h.amt > 0 ? '+' : '';
+                    histDiv.innerHTML += `<div class="list-item"><span>${icon} ${h.desc}</span><span class="${cssClass}">${sign}₹${h.amt}</span></div>`; 
+                });
+            },
+
+            openSpendModal() {
+                this.spendState = { item: null, amount: '0' };
+                this.updateSpendUI();
+                
+                const grid = document.getElementById('spendItemsGrid');
+                grid.innerHTML = '';
+                spendItemsList.forEach(item => {
+                    grid.innerHTML += `<div class="spend-tile" id="tile_${item.id}" onclick="App.selectSpendItem('${item.id}')">
+                        <span class="spend-tile-emoji">${item.emoji}</span>
+                        <span class="spend-tile-name">${item.name}</span>
+                    </div>`;
+                });
+                document.getElementById('modal-spend').classList.add('active');
+            },
+            selectSpendItem(id) {
+                const item = spendItemsList.find(i => i.id === id);
+                this.spendState.item = item.name;
+                document.querySelectorAll('.spend-tile').forEach(t => t.classList.remove('active'));
+                document.getElementById(`tile_${id}`).classList.add('active');
+                this.updateSpendUI();
+            },
+            numpadPress(key) {
+                if (key === 'C') {
+                    this.spendState.amount = '0';
+                } else if (key === 'B') {
+                    this.spendState.amount = this.spendState.amount.slice(0, -1);
+                    if (this.spendState.amount === '') this.spendState.amount = '0';
+                } else {
+                    if (this.spendState.amount === '0') {
+                        this.spendState.amount = key;
+                    } else {
+                        if (this.spendState.amount.length < 4) {
+                            this.spendState.amount += key;
+                        }
+                    }
+                }
+                this.updateSpendUI();
+            },
+            updateSpendUI() {
+                document.getElementById('spendItemDisplay').innerText = this.spendState.item ? this.spendState.item : 'Select an Item...';
+                document.getElementById('spendAmtDisplay').innerText = this.spendState.amount;
+            },
+            submitSpend() {
+                if (!this.spendState.item) return this.showToast('Please select what you are buying!');
+                const amt = parseInt(this.spendState.amount);
+                if (isNaN(amt) || amt <= 0) return this.showToast('Enter a valid amount!');
+                
+                this.applyTransaction(`Bought: ${this.spendState.item}`, -Math.abs(amt), 'spend');
+                this.closeModal('modal-spend');
+            },
+
+            showActivities(type) {
+                const list = document.getElementById('activityList'); document.getElementById('activityTitle').innerText = type === 'good' ? 'Great Job! Select Activity:' : 'Oh no! Select Penalty:'; 
+                document.getElementById('activityTitle').style.color = type === 'good' ? 'var(--good)' : 'var(--bad)'; list.innerHTML = '';
+                Store.data.activities[type].forEach(act => { 
+                    const btnClass = type === 'good' ? 'btn-good' : 'btn-bad'; 
+                    const amtText = act.timeBased ? `(₹${act.rateAmt || 1} per ${act.rateMin || 1}m)` : `(₹${Math.abs(act.amt)})`; 
+                    list.innerHTML += `<button class="btn ${btnClass}" onclick="App.selectActivity('${act.id}', '${type}')">${act.name} <br><small style="font-weight:normal; font-size:0.9rem;">${amtText}</small></button>`; 
+                });
+                this.navTo('activity');
+            },
+            selectActivity(actId, type) {
+                const act = Store.data.activities[type].find(a => a.id === actId); const child = Store.data.children.find(c => c.id === this.activeChildId);
+                if(type === 'good') {
+                    let todayEarned = 0; const today = new Date().toDateString();
+                    child.history.forEach(h => { let t = h.type || (h.amt > 0 ? 'good' : 'bad'); if(t === 'good' && new Date(h.time).toDateString() === today) todayEarned += h.amt; });
+                    if(todayEarned + act.amt > child.dailyLimit) { this.showToast('Daily limit reached!'); Sound.play('bad'); return; }
+                    this.applyTransaction(act.name, act.amt, 'good');
+                } else {
+                    if(act.timeBased) { 
+                        this.pendingActivity = act; 
+                        document.getElementById('timePenaltyDesc').innerText = `Enter minutes (₹${act.rateAmt || 1} deducted per ${act.rateMin || 1} mins):`;
+                        document.getElementById('inpTimeMinutes').value = ''; document.getElementById('modal-time').classList.add('active'); 
+                    } else { this.applyTransaction(act.name, -Math.abs(act.amt), 'bad'); }
+                }
+            },
+            submitTimeActivity() {
+                const mins = parseInt(document.getElementById('inpTimeMinutes').value); if(isNaN(mins) || mins <= 0) return this.showToast('Enter valid minutes');
+                const rMin = this.pendingActivity.rateMin || 1; const rAmt = this.pendingActivity.rateAmt || 1;
+                const deduction = Math.floor(mins / rMin) * rAmt; 
+                if(deduction === 0) { this.showToast(`Less than ${rMin} minutes, no deduction.`); this.closeModal('modal-time'); this.navTo('dashboard'); return; }
+                this.applyTransaction(`${this.pendingActivity.name} (${mins}m)`, -Math.abs(deduction), 'bad'); this.closeModal('modal-time');
+            },
+            applyTransaction(desc, amount, type) {
+                const child = Store.data.children.find(c => c.id === this.activeChildId);
+                child.balance += amount; 
+                child.history.push({ desc, amt: amount, type: type, time: Date.now() }); 
+                Store.save();
+                
+                let feedbackText = amount > 0 ? `+₹${amount} Added!` : `${amount} Deducted`;
+                if(type === 'spend') feedbackText = `₹${Math.abs(amount)} Spent`;
+                this.triggerFeedback(type, feedbackText);
+                this.updateDashboard(); this.navTo('dashboard');
+            },
+
+            renderSettings() {
+                const childFilter = document.getElementById('filterChild');
+                childFilter.innerHTML = '<option value="all">All Kids</option>';
+                
+                const childList = document.getElementById('settingsChildList'); childList.innerHTML = '';
+                Store.data.children.forEach(c => { 
+                    childFilter.innerHTML += `<option value="${c.id}">${c.emoji} ${c.name}</option>`;
+                    childList.innerHTML += `<div class="list-item" style="display:block;"><div style="font-size:1.2rem; font-weight:bold; margin-bottom:5px;">${c.emoji} ${c.name}</div><div><button class="btn-small btn-primary" onclick="App.openEditChildModal('${c.id}')">Edit</button> <button class="btn-small btn-bad" onclick="App.deleteChild('${c.id}')">Delete</button></div></div>`; 
+                });
+
+                const goodList = document.getElementById('settingsGoodActs'); goodList.innerHTML = '';
+                Store.data.activities.good.forEach(a => { goodList.innerHTML += `<div class="list-item"><span><b>${a.name}</b> (₹${a.amt})</span><div><button class="btn-small btn-primary" onclick="App.openEditActModal('${a.id}','good')">Edit</button> <button class="btn-small btn-bad" onclick="App.deleteAct('${a.id}','good')">X</button></div></div>`; });
+
+                const badList = document.getElementById('settingsBadActs'); badList.innerHTML = '';
+                Store.data.activities.bad.forEach(a => {
+                    const txt = a.timeBased ? `(₹${a.rateAmt || 1} per ${a.rateMin || 1}m)` : `(-₹${Math.abs(a.amt)})`;
+                    badList.innerHTML += `<div class="list-item"><span><b>${a.name}</b> ${txt}</span><div><button class="btn-small btn-primary" onclick="App.openEditActModal('${a.id}','bad')">Edit</button> <button class="btn-small btn-bad" onclick="App.deleteAct('${a.id}','bad')">X</button></div></div>`;
+                });
+            },
+
+            filterHistory() {
+                const childId = document.getElementById('filterChild').value;
+                const dateVal = document.getElementById('filterDate').value;
+                const list = document.getElementById('parentHistoryList');
+                list.innerHTML = '';
+
+                let allHistory = [];
+                Store.data.children.forEach(c => {
+                    if(childId === 'all' || childId === c.id) {
+                        c.history.forEach(h => { allHistory.push({...h, childName: c.name, childEmoji: c.emoji}); });
+                    }
+                });
+
+                allHistory.sort((a,b) => b.time - a.time);
+
+                if(dateVal) {
+                    const targetDate = new Date(dateVal).toDateString();
+                    allHistory = allHistory.filter(h => new Date(h.time).toDateString() === targetDate);
+                }
+
+                if(allHistory.length === 0) { list.innerHTML = '<p style="text-align:center; color:#999; font-weight:bold;">No records found.</p>'; return; }
+
+                allHistory.forEach(h => {
+                    const dateStr = new Date(h.time).toLocaleDateString() + ' ' + new Date(h.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    let t = h.type || (h.amt > 0 ? 'good' : 'bad');
+                    let color = t === 'spend' ? 'color:var(--spend)' : (h.amt > 0 ? 'color:var(--good)' : 'color:var(--bad)');
+                    let sign = h.amt > 0 ? '+' : '';
+                    let displayAmt = `<span style="font-weight:900; font-size:1.1rem; ${color}">${sign}₹${h.amt}</span>`;
+                    
+                    list.innerHTML += `
+                        <div class="history-card">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:5px; border-bottom:1px dashed #eee; padding-bottom:5px;">
+                                <b style="color:var(--text);">${h.childEmoji} ${h.childName}</b>
+                                <span style="color:#999; font-size:0.8rem; font-weight:bold;">${dateStr}</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span style="color:#555; font-weight:bold; font-size:0.95rem;">${h.desc}</span>
+                                ${displayAmt}
+                            </div>
+                        </div>
+                    `;
+                });
+            },
+
+            openEditChildModal(id) {
+                this.editingChildId = id;
+                if(id) {
+                    const c = Store.data.children.find(x => x.id === id); document.getElementById('editChildTitle').innerText = 'Edit Child';
+                    document.getElementById('inpCName').value = c.name; document.getElementById('inpCEmoji').value = c.emoji; document.getElementById('inpCGoal').value = c.goal; document.getElementById('inpCLimit').value = c.dailyLimit;
+                } else {
+                    document.getElementById('editChildTitle').innerText = 'Add New Child';
+                    document.getElementById('inpCName').value = ''; document.getElementById('inpCEmoji').value = ''; document.getElementById('inpCGoal').value = ''; document.getElementById('inpCLimit').value = '';
+                }
+                document.getElementById('modal-edit-child').classList.add('active');
+            },
+            saveChild() {
+                const name = document.getElementById('inpCName').value.trim(); const emoji = document.getElementById('inpCEmoji').value.trim() || '👦';
+                const goal = parseInt(document.getElementById('inpCGoal').value) || 0; const limit = parseInt(document.getElementById('inpCLimit').value) || 50;
+                if(!name) return this.showToast('Name required');
+                if(this.editingChildId) { const c = Store.data.children.find(x => x.id === this.editingChildId); c.name = name; c.emoji = emoji; c.goal = goal; c.dailyLimit = limit; } 
+                else { Store.data.children.push({ id: 'c_' + Date.now(), name, emoji, goal, dailyLimit: limit, balance: 0, history: [] }); }
+                Store.save(); this.closeModal('modal-edit-child'); this.showToast('Saved!'); this.renderSettings(); this.filterHistory();
+            },
+            deleteChild(id) { if(confirm('Remove this child and all history?')) { Store.data.children = Store.data.children.filter(c => c.id !== id); Store.save(); this.renderSettings(); this.filterHistory(); } },
+
+            openEditActModal(id, type) {
+                this.editingActId = id; this.editingActType = type;
+                const timeBox = document.getElementById('timeBasedToggle'); timeBox.style.display = type === 'bad' ? 'block' : 'none'; 
+                
+                if(id) {
+                    const a = Store.data.activities[type].find(x => x.id === id); document.getElementById('editActTitle').innerText = 'Edit ' + (type==='good' ? 'Good Work' : 'Penalty');
+                    document.getElementById('inpAName').value = a.name; document.getElementById('inpAAmt').value = Math.abs(a.amt);
+                    document.getElementById('inpATime').checked = a.timeBased || false;
+                    document.getElementById('inpTRateAmt').value = a.rateAmt || 1;
+                    document.getElementById('inpTRateMin').value = a.rateMin || 1;
+                } else {
+                    document.getElementById('editActTitle').innerText = 'Add ' + (type==='good' ? 'Good Work' : 'Penalty');
+                    document.getElementById('inpAName').value = ''; document.getElementById('inpAAmt').value = ''; document.getElementById('inpATime').checked = false;
+                    document.getElementById('inpTRateAmt').value = 1; document.getElementById('inpTRateMin').value = 1;
+                }
+                
+                document.getElementById('timeRateSettings').style.display = document.getElementById('inpATime').checked ? 'block' : 'none';
+                document.getElementById('btnSaveAct').className = type === 'good' ? 'btn btn-good' : 'btn btn-bad';
+                document.getElementById('modal-edit-act').classList.add('active');
+            },
+            saveActivity() {
+                const name = document.getElementById('inpAName').value.trim(); let amt = parseInt(document.getElementById('inpAAmt').value) || 0;
+                const isTime = document.getElementById('inpATime').checked && this.editingActType === 'bad';
+                const rAmt = parseInt(document.getElementById('inpTRateAmt').value) || 1; const rMin = parseInt(document.getElementById('inpTRateMin').value) || 1;
+                
+                if(!name) return this.showToast('Name required');
+                if(!isTime && amt <= 0) return this.showToast('Enter valid amount');
+
+                if(this.editingActId) {
+                    const a = Store.data.activities[this.editingActType].find(x => x.id === this.editingActId);
+                    a.name = name; a.amt = amt; a.timeBased = isTime; a.rateAmt = rAmt; a.rateMin = rMin;
+                } else { Store.data.activities[this.editingActType].push({ id: 'a_' + Date.now(), name: name, amt: amt, timeBased: isTime, rateAmt: rAmt, rateMin: rMin }); }
+                Store.save(); this.closeModal('modal-edit-act'); this.showToast('Saved!'); this.renderSettings();
+            },
+            deleteAct(id, type) { if(confirm('Delete this activity?')) { Store.data.activities[type] = Store.data.activities[type].filter(a => a.id !== id); Store.save(); this.renderSettings(); } },
+            resetData() { Store.data.children = []; Store.data.activities = { good:[], bad:[] }; Store.save(); this.showToast('Factory Reset Complete'); window.location.reload(); }
+        };
+
+        // Initialize PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker registered', reg))
+                    .catch(err => console.error('Service Worker registration failed', err));
+            });
+        }
+
+        window.onload = () => App.init();
+    </script>
+</body>
+</html>
